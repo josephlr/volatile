@@ -33,34 +33,26 @@ fn test_access() {
 
     // ReadWrite
     assert_eq!(
-        unsafe { VolatilePtr::new_with_access(NonNull::from(&mut val), Access::read_write()) }
-            .read(),
+        unsafe { VolatilePtr::new_read_write(NonNull::from(&mut val)) }.read(),
         42
     );
-    unsafe { VolatilePtr::new_with_access(NonNull::from(&mut val), Access::read_write()) }
-        .write(50);
+    unsafe { VolatilePtr::new_read_write(NonNull::from(&mut val)) }.write(50);
     assert_eq!(val, 50);
-    unsafe { VolatilePtr::new_with_access(NonNull::from(&mut val), Access::read_write()) }
-        .update(|i| *i += 1);
+    unsafe { VolatilePtr::new_read_write(NonNull::from(&mut val)) }.update(|i| *i += 1);
     assert_eq!(val, 51);
 
     // ReadOnly and WriteOnly
     assert_eq!(
-        unsafe { VolatilePtr::new_with_access(NonNull::from(&mut val), Access::read_only()) }
-            .read(),
+        unsafe { VolatilePtr::new_read_only(NonNull::from(&mut val)) }.read(),
         51
     );
-    unsafe { VolatilePtr::new_with_access(NonNull::from(&mut val), Access::write_only()) }
-        .write(12);
+    unsafe { VolatilePtr::new_write_only(NonNull::from(&mut val)) }.write(12);
     assert_eq!(val, 12);
 
     // Custom: safe read + safe write
     {
-        let access = Access {
-            read: SafeAccess,
-            write: SafeAccess,
-        };
-        let mut volatile = unsafe { VolatilePtr::new_with_access(NonNull::from(&mut val), access) };
+        type Custom = Access<SafeAccess, SafeAccess>;
+        let mut volatile = unsafe { VolatilePtr::new_generic::<Custom>(NonNull::from(&mut val)) };
         let random: i32 = rand::random();
         volatile.write(i64::from(random));
         assert_eq!(volatile.read(), i64::from(random));
@@ -71,11 +63,8 @@ fn test_access() {
 
     // Custom: safe read + unsafe write
     {
-        let access = Access {
-            read: SafeAccess,
-            write: UnsafeAccess,
-        };
-        let mut volatile = unsafe { VolatilePtr::new_with_access(NonNull::from(&mut val), access) };
+        type Custom = Access<SafeAccess, UnsafeAccess>;
+        let mut volatile = unsafe { VolatilePtr::new_generic::<Custom>(NonNull::from(&mut val)) };
         let random: i32 = rand::random();
         unsafe { volatile.write_unsafe(i64::from(random)) };
         assert_eq!(volatile.read(), i64::from(random));
@@ -86,23 +75,17 @@ fn test_access() {
 
     // Custom: safe read + no write
     {
-        let access = Access {
-            read: SafeAccess,
-            write: NoAccess,
-        };
+        type Custom = Access<SafeAccess, NoAccess>;
         let random = rand::random();
         val = random;
-        let volatile = unsafe { VolatilePtr::new_with_access(NonNull::from(&mut val), access) };
+        let volatile = unsafe { VolatilePtr::new_generic::<Custom>(NonNull::from(&mut val)) };
         assert_eq!(volatile.read(), i64::from(random));
     }
 
     // Custom: unsafe read + safe write
     {
-        let access = Access {
-            read: UnsafeAccess,
-            write: SafeAccess,
-        };
-        let mut volatile = unsafe { VolatilePtr::new_with_access(NonNull::from(&mut val), access) };
+        type Custom = Access<UnsafeAccess, SafeAccess>;
+        let mut volatile = unsafe { VolatilePtr::new_generic::<Custom>(NonNull::from(&mut val)) };
         let random: i32 = rand::random();
         volatile.write(i64::from(random));
         assert_eq!(unsafe { volatile.read_unsafe() }, i64::from(random));

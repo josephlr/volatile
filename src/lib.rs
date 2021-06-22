@@ -25,7 +25,6 @@ use access::{Access, ReadOnly, ReadWrite, WriteOnly};
 use core::{
     fmt,
     marker::PhantomData,
-    mem,
     ptr::{self, NonNull},
 };
 #[cfg(feature = "unstable")]
@@ -115,15 +114,15 @@ where
     T: ?Sized,
 {
     pub unsafe fn new_read_write(pointer: NonNull<T>) -> VolatilePtr<'static, T> {
-        unsafe { VolatilePtr::new_with_access(pointer, Access::read_write()) }
+        unsafe { VolatilePtr::new_generic(pointer) }
     }
 
     pub const unsafe fn new_read_only(pointer: NonNull<T>) -> VolatilePtr<'static, T, ReadOnly> {
-        unsafe { VolatilePtr::new_with_access(pointer, Access::read_only()) }
+        unsafe { VolatilePtr::new_generic(pointer) }
     }
 
     pub const unsafe fn new_write_only(pointer: NonNull<T>) -> VolatilePtr<'static, T, WriteOnly> {
-        unsafe { VolatilePtr::new_with_access(pointer, Access::write_only()) }
+        unsafe { VolatilePtr::new_generic(pointer) }
     }
 
     /// Constructs a new volatile instance wrapping the given reference.
@@ -149,14 +148,6 @@ where
     /// volatile.write(1);
     /// assert_eq!(volatile.read(), 1);
     /// ```
-    pub const unsafe fn new_with_access<A>(
-        pointer: NonNull<T>,
-        access: A,
-    ) -> VolatilePtr<'static, T, A> {
-        mem::forget(access); // needed because we cannot require `A: Copy` on stable Rust yet
-        unsafe { Self::new_generic(pointer) }
-    }
-
     pub const unsafe fn new_generic<'a, A>(pointer: NonNull<T>) -> VolatilePtr<'a, T, A> {
         VolatilePtr {
             pointer,
