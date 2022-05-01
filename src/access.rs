@@ -1,22 +1,25 @@
-/// Helper trait that is implemented by [`ReadWrite`] and [`ReadOnly`].
-pub trait Readable {}
+pub struct NoAccess(());
+pub struct UnsafeAccess(());
+pub struct SafeAccess(());
 
-/// Helper trait that is implemented by [`ReadWrite`] and [`WriteOnly`].
-pub trait Writable {}
+/// A type implements this trait if all the operations in `A` are also allowed
+/// for this type. Phrased otherwise, the permitted operations for `A` are a
+/// subset of the permitted operations for `Self`.
+pub unsafe trait Allows<A> {}
 
-/// Zero-sized marker type for allowing both read and write access.
-#[derive(Debug, Copy, Clone)]
-pub struct ReadWrite;
-impl Readable for ReadWrite {}
-impl Writable for ReadWrite {}
+unsafe impl Allows<SafeAccess> for SafeAccess {}
+unsafe impl<T: Allows<SafeAccess>> Allows<UnsafeAccess> for T {}
+unsafe impl Allows<UnsafeAccess> for UnsafeAccess {}
+unsafe impl<T: Allows<UnsafeAccess>> Allows<NoAccess> for T {}
+unsafe impl Allows<NoAccess> for NoAccess {}
 
-/// Zero-sized marker type for allowing only read access.
-#[derive(Debug, Copy, Clone)]
-pub struct ReadOnly;
+/// A trait representing a set of premitted Read and Write operations.
+pub trait Access {
+    type Read;
+    type Write;
+}
 
-impl Readable for ReadOnly {}
-
-/// Zero-sized marker type for allowing only write access.
-#[derive(Debug, Copy, Clone)]
-pub struct WriteOnly;
-impl Writable for WriteOnly {}
+impl<Read, Write> Access for (Read, Write) {
+    type Read = Read;
+    type Write = Write;
+}
